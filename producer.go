@@ -3,9 +3,7 @@ package nsq_queue
 import (
 	"errors"
 	"fmt"
-	"github.com/jinzhu/gorm"
 	"github.com/outreach-golang/nsq-queue/option"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var Producer *NsqProducer
@@ -46,7 +44,7 @@ func (p *NsqProducer) AddLogs(msg map[string]string) error {
 	return err
 }
 
-func (p *NsqProducer) ProducerMessage(msg map[string]string, dbs map[string]*gorm.DB, client *mongo.Client) error {
+func (p *NsqProducer) ProducerMessage(msg map[string]string) error {
 	var (
 		message = msg["message"]
 		topic   = msg["TopicName"]
