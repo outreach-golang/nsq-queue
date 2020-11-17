@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/outreach-golang/nsq-queue/option"
+	"github.com/outreach-golang/nsq-queue/service"
 )
 
 var Producer *NsqProducer
@@ -16,30 +17,31 @@ func NewNsqProducer(ops ...Option) (*NsqProducer, error) {
 		op(producer)
 	}
 
-	//if config.ServerName == "" {
-	//	return nil, errors.New("ServerName参数必填！")
-	//}
-	//
-	//Logger, err := logger(config)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
 	Producer = producer
 
 	return Producer, nil
 }
 
+func (p *NsqProducer) MaintainSub(msg map[string]string) error {
+	//维护 在redis 中的topic 和回调url对应关系
+	var (
+		topic   = msg["TopicName"]
+		handurl = msg["Handler"]
+	)
+	err := service.MaintainSub(topic, handurl, p.RedisCli)
+	return err
+}
+
 func (p *NsqProducer) BindHander(msg map[string]string) error {
-	//	绑定需要回调的url 等信息 入mysql
-	fmt.Println("bind handler info to mysql ")
-	err := option.AddSub(msg, p.MysqlDBS)
+	//	绑定需要回调的url 等信息 入mongo
+	fmt.Println("bind handler info to mongo ")
+	err := option.AddSub(msg, p.MongoCli)
 	return err
 }
 
 func (p *NsqProducer) AddLogs(msg map[string]string) error {
 	//	将消息信息写入mongo
-	fmt.Println("add the message to mongo")
+	fmt.Println("add the message log  to mongo")
 	err := option.AddSubLog(msg, p.MongoCli)
 	return err
 }
@@ -54,12 +56,15 @@ func (p *NsqProducer) ProducerMessage(msg map[string]string) error {
 		return errors.New("缺少必要的参数")
 	}
 
-	//mysql记录 回调等信息
+	//mongo记录 回调等信息
 	err := p.BindHander(msg)
 	if err != nil {
 		fmt.Println("bind handler info to mysql fail")
 		return err
 	}
+
+	//在 redis维护 topic 对应的handlerurl, 做缓存使用
+	p.MaintainSub(msg)
 
 	//推送信息
 	err = p.Producer.Publish(topic, []byte(message))

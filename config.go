@@ -3,6 +3,7 @@ package nsq_queue
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v7"
 	"github.com/jinzhu/gorm"
 	"github.com/nsqio/go-nsq"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -19,6 +20,8 @@ type NsqProducer struct {
 	MysqlDBS map[string]*gorm.DB
 	//mongo 连接客户端
 	MongoCli *mongo.Client
+	//redis 客户端
+	RedisCli *redis.Client
 	//log 日志
 	Log *zap.Logger
 	//	消息体结构
@@ -42,7 +45,8 @@ func DefaultProducer() *NsqProducer {
 		db            *gorm.DB
 		param         string
 		clientOptions *options.ClientOptions
-		client        *mongo.Client
+		mongoClient   *mongo.Client
+		redisClient   *redis.Client
 	)
 	p = &NsqProducer{}
 
@@ -53,16 +57,24 @@ func DefaultProducer() *NsqProducer {
 	// mysql 客户端
 	db, _ = gorm.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=True&timeout=5s&loc=Asia%%2FShanghai", "root", "root", "127.0.0.1:3306", "nsq"))
 
+	// redis客户端
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "",
+		DB:       0,
+	})
+
 	// momgod 客户端
 	param = fmt.Sprintf("mongodb://127.0.0.1:27017")
 	clientOptions = options.Client().ApplyURI(param)
-	client, _ = mongo.Connect(context.TODO(), clientOptions)
+	mongoClient, _ = mongo.Connect(context.TODO(), clientOptions)
 
 	p.Producer = producer
 	p.MysqlDBS = map[string]*gorm.DB{
 		"manage": db,
 	}
-	p.MongoCli = client
+	p.MongoCli = mongoClient
+	p.RedisCli = redisClient
 
 	return p
 }
@@ -76,6 +88,12 @@ func SetMysql(dbs map[string]*gorm.DB) Option {
 func SetMongo(mongoclient *mongo.Client) Option {
 	return func(nsq *NsqProducer) {
 		nsq.MongoCli = mongoclient
+	}
+}
+
+func SetRedis(redisclient *redis.Client) Option {
+	return func(nsq *NsqProducer) {
+		nsq.RedisCli = redisclient
 	}
 }
 
