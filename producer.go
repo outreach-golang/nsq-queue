@@ -59,12 +59,16 @@ func (p *NsqProducer) ProducerMessage(msg map[string]string) error {
 	//mongo记录 回调等信息
 	err := p.BindHander(msg)
 	if err != nil {
-		fmt.Println("bind handler info to mysql fail")
+		fmt.Println("bind handler info to mongo fail")
 		return err
 	}
 
 	//在 redis维护 topic 对应的handlerurl, 做缓存使用
-	p.MaintainSub(msg)
+	err = p.MaintainSub(msg)
+	if err != nil {
+		fmt.Println("maintain handurl in redis fail")
+		return err
+	}
 
 	//推送信息
 	err = p.Producer.Publish(topic, []byte(message))
@@ -74,7 +78,10 @@ func (p *NsqProducer) ProducerMessage(msg map[string]string) error {
 	}
 
 	//将消息日志写入mongo
-	p.AddLogs(msg)
+	err = p.AddLogs(msg)
+	if err != nil {
+		fmt.Println("add the logs ")
+	}
 
 	fmt.Printf("%s producer message success!\n", message)
 	return nil

@@ -20,7 +20,7 @@ func AddSubLog(msg map[string]string, client *mongo.Client) error {
 
 	sublog = &model.SubscriptionLog{
 		Message:   msg["message"],
-		TopicName: msg["topicName"],
+		TopicName: msg["TopicName"],
 		TopicTag:  msg["topicTag"],
 		Handler:   msg["Handler"],
 		Status:    int32(status),

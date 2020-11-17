@@ -44,7 +44,7 @@ func MaintainSub(topic, handurl string, redisclient *redis.Client) error {
 	)
 	value = AssembleValue(topic, handurl, redisclient)
 	number = redisclient.HSet(NSQ_CONSUMER, topic, value).Val()
-	if number == 0 {
+	if number == -1 {
 		return errors.New("maintain the handurl to the redis fail")
 	}
 	return nil
